@@ -1,2 +1,2 @@
-# landing_page
-PhD Hub Landing Page
+# PhDHub Landing Page
+Home Page for PhDHub.
