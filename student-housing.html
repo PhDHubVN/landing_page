@@ -6,9 +6,104 @@
     <title>Student Housing - PhD.Hub</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6H7YV01060"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-6H7YV01060');
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #map { width: 100%; z-index: 1; border-radius: 0.5rem; }
+        .listing-scroll::-webkit-scrollbar { width: 6px; }
+        .listing-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .listing-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+        #lang-selector {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+            cursor: pointer;
+        }
+        #lang-selector:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        #lang-selector:focus {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        #lang-selector option {
+            background-color: #1e40af;
+            color: white;
+            padding: 8px 12px;
+            font-weight: 500;
+        }
+        #lang-selector option:hover {
+            background-color: #3b82f6;
+        }
+        #lang-selector option:checked {
+            background-color: #2563eb;
+            font-weight: 600;
+        }
+        #contribute-btn {
+            background: linear-gradient(120deg, #12853c, #28e26c) !important;
+            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
+            border: none;
+            font-family: "Times New Roman", serif;
+            font-size: 15px;
+            letter-spacing: 0.05em;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            animation: pulse 3s ease-in-out infinite, blink 2s ease-in-out infinite;
+        }
+        #contribute-btn:hover {
+            background: linear-gradient(120deg, #16a34a, #22c55e);
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px rgba(34, 197, 94, 0.5);
+        }
+        #contribute-btn:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline-offset: 3px;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        @keyframes blink {
+            0%, 100% {
+                filter: brightness(1);
+                box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
+                opacity: 1;
+            }
+            50% {
+                filter: brightness(1.2);
+                box-shadow: 0 20px 30px rgba(34, 197, 94, 0.6);
+                opacity: 0.9;
+            }
+        }
+        @media (max-width: 767px) {
+            #left-column {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+            #map-panel {
+                min-height: 40vh;
+            }
+        }
+    </style>
 </head>
-<body>
-    <!-- Navigation -->
+<body class="bg-white text-gray-800 flex flex-col overflow-hidden">
     <nav class="navbar">
         <div class="container">
             <div class="nav-wrapper">
@@ -39,63 +134,872 @@
         </div>
     </nav>
 
-    <!-- Under Construction Section -->
-    <section class="hero" style="min-height: 80vh; display: flex; align-items: center; justify-content: center;">
-        <div class="container" style="text-align: center;">
-            <div class="construction-content">
-                <i class="fas fa-tools" style="font-size: 5rem; color: var(--primary); margin-bottom: 2rem; opacity: 0.8;"></i>
-                <h1 class="hero-title" data-en="Student Housing" data-vi="Nhà Ở Sinh Viên" style="margin-bottom: 1.5rem;">
-                    Student Housing
-                </h1>
-                <p class="hero-subtitle" data-en="Platform is under construction. Stay tuned!" data-vi="Nền tảng đang được xây dựng. Hãy theo dõi!" style="font-size: 1.5rem; margin-bottom: 2rem;">
-                    Platform is under construction. Stay tuned!
-                </p>
-                <div style="margin-top: 3rem;">
-                    <i class="fas fa-home" style="font-size: 3rem; color: var(--secondary); opacity: 0.6; margin: 0 1rem;"></i>
-                    <i class="fas fa-building" style="font-size: 3rem; color: var(--secondary); opacity: 0.6; margin: 0 1rem;"></i>
-                    <i class="fas fa-key" style="font-size: 3rem; color: var(--secondary); opacity: 0.6; margin: 0 1rem;"></i>
+    <div class="bg-blue-700 text-white shadow-lg shrink-0 z-50">
+        <div class="w-full px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold leading-tight">Student Housing</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a id="contribute-btn" href="https://forms.gle/mZ3YEGSUuxDXvh7y7" target="_blank" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded shadow font-bold transition flex items-center gap-2 text-sm" style="width: 300px; height: 50px; justify-content: center; background-color: rgba(4, 200, 53, 1);" onclick="Analytics.trackButton('contribute', { url: 'https://forms.gle/mZ3YEGSUuxDXvh7y7' });">
+                    <i class="fa-solid fa-plus-circle"></i> <span id="contribute-text">Chia sẻ địa chỉ nhà ở tại đây</span>
+                </a>
+                <div class="flex items-center gap-1">
+                    <select id="lang-selector" class="bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-all border border-white/40 focus:outline-none focus:border-white focus:bg-white/30 focus:shadow-md cursor-pointer appearance-none" style="height: 50px; min-width: 120px;">
+                        <option value="vi" class="text-gray-800 bg-white">Tiếng Việt</option>
+                        <option value="en" class="text-gray-800 bg-white">English</option>
+                    </select>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3 data-en="About PhD.Hub" data-vi="Về PhD.Hub">About PhD.Hub</h3>
-                    <p data-en="Connecting researchers worldwide to advance knowledge and innovation" data-vi="Kết nối các nhà nghiên cứu toàn cầu để thúc đẩy tri thức và đổi mới">
-                        Connecting researchers worldwide to advance knowledge and innovation
-                    </p>
+    <div class="w-full px-2 py-2 flex flex-col md:flex-row gap-0 h-screen overflow-hidden">
+        <div id="left-column" class="flex flex-col gap-2 h-full min-h-0 overflow-hidden order-2 md:order-1 relative w-full md:w-1/3 lg:w-1/4">
+            <div class="bg-white p-3 rounded-lg shadow shrink-0 space-y-2 border border-gray-100">
+                <div class="flex items-center justify-between text-sm font-semibold">
+                    <span id="filter-title">Bộ lọc</span>
+                    <button id="filter-toggle" class="px-3 py-1 rounded-full border border-blue-600 text-blue-600 text-xs font-semibold">Hiện bộ lọc</button>
                 </div>
-                <div class="footer-section">
-                    <h3 data-en="Quick Links" data-vi="Liên Kết">Quick Links</h3>
-                    <ul>
-                        <li><a href="index.html" data-en="Home" data-vi="Trang Chủ">Home</a></li>
-                        <li><a href="foundation.html" data-en="Foundation" data-vi="Quỹ">Foundation</a></li>
-                        <li><a href="about.html" data-en="About" data-vi="Giới Thiệu">About</a></li>
-                        <li><a href="mentorship.html" data-en="Mentorship" data-vi="Cố Vấn">Mentorship</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h3 data-en="Contact" data-vi="Liên Hệ">Contact</h3>
-                    <p><i class="fas fa-envelope"></i> contact@phdhub.org</p>
-                    <div class="social-links">
-                        <a href="#" title="Facebook"><i class="fab fa-facebook"></i></a>
-                        <a href="#" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
-                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                <div id="filter-body" class="space-y-3 hidden">
+                    <div class="space-y-2 text-[10px] text-gray-700">
+                        <label class="flex flex-col gap-1">
+                            <span id="filter-rating-label" class="text-xs font-semibold text-gray-800">Số sao tối thiểu</span>
+                            <select id="filter-rating" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 text-sm focus:outline-none focus:border-blue-500">
+                                <option value="">Bất kỳ số sao</option>
+                                <option value="5">Từ 5 ★</option>
+                                <option value="4">Từ 4 ★</option>
+                                <option value="3">Từ 3 ★</option>
+                                <option value="2">Từ 2 ★</option>
+                                <option value="1">Từ 1 ★</option>
+                            </select>
+                        </label>
+                        <label class="flex flex-col gap-1">
+                            <span id="filter-country-label" class="text-xs font-semibold text-gray-800">Quốc gia</span>
+                            <div id="filter-country-wrapper"></div>
+                        </label>
+                        <label class="flex flex-col gap-1">
+                            <span id="filter-city-label" class="text-xs font-semibold text-gray-800">Thành phố / Khu vực</span>
+                            <div id="filter-city-wrapper"></div>
+                        </label>
                     </div>
                 </div>
+                
+                <div class="flex justify-between items-center text-[10px] text-gray-400">
+                    <span id="loading-status">Đang tải...</span>
+                    <span id="result-count" class="italic"></span>
+                </div>
             </div>
-            <div class="footer-bottom">
-                <p data-en="© 2024 PhD.Hub. All rights reserved." data-vi="© 2024 PhD.Hub. Tất cả quyền được bảo lưu.">
-                    © 2024 PhD.Hub. All rights reserved.
-                </p>
+            
+            <div class="flex-1 min-h-0 overflow-y-auto listing-scroll space-y-3 pr-1 pb-20" id="listing-container">
+                <div class="text-center mt-10"><div class="loader"></div></div>
+            </div>
+
+            <div id="resize-handle" class="hidden md:flex w-2 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors absolute right-0 top-0 z-10 h-full items-center justify-center" style="margin: 0 2px;">
+                <div class="w-0.5 h-12 bg-gray-400 rounded"></div>
             </div>
         </div>
-    </footer>
 
-    <script src="js/main.js"></script>
+        <div id="map-panel" class="flex-1 bg-white rounded-lg shadow flex flex-col relative h-[40vh] min-h-[40vh] md:h-full order-1 md:order-2 min-w-0">
+            <div id="map" class="h-full w-full"></div>
+        </div>
+    </div>
+
+    <div id="contact-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-4 relative animate-fade-in">
+            <button onclick="closeContactPopup()" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2 flex items-center gap-2">
+                <i class="fa-solid fa-address-card text-blue-600"></i>
+                <span id="contact-modal-title">Thông tin liên hệ</span>
+            </h3>
+            <div id="contact-modal-content" class="text-sm text-gray-600 break-words leading-relaxed"></div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeContactPopup()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold px-3 py-1.5 rounded transition">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const Analytics = {
+            track: function(eventName, eventParams = {}) {
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', eventName, eventParams);
+                }
+                console.log('[Analytics]', eventName, eventParams);
+            },
+            trackButton: function(buttonName, additionalParams = {}) {
+                this.track('button_click', {
+                    button_name: buttonName,
+                    ...additionalParams
+                });
+            },
+            trackFilter: function(filterType, filterValue, additionalParams = {}) {
+                this.track('filter_used', {
+                    filter_type: filterType,
+                    filter_value: filterValue,
+                    ...additionalParams
+                });
+            },
+            trackListing: function(action, listingId, additionalParams = {}) {
+                this.track('listing_interaction', {
+                    action: action,
+                    listing_id: listingId,
+                    ...additionalParams
+                });
+            },
+            trackMap: function(action, additionalParams = {}) {
+                this.track('map_interaction', {
+                    action: action,
+                    ...additionalParams
+                });
+            }
+        };
+
+        class SearchableSelect {
+            constructor(containerId, placeholder, onChange) {
+                this.container = document.getElementById(containerId);
+                this.placeholder = placeholder;
+                this.onChange = onChange;
+                this.options = [];
+                this.value = "";
+                this.isOpen = false;
+                this.render();
+                document.addEventListener('click', (e) => {
+                    if (this.container && !this.container.contains(e.target)) {
+                        this.close();
+                    }
+                });
+            }
+
+            setOptions(options) {
+                this.options = options;
+                this.filterOptions(this.searchInput ? this.searchInput.value : '');
+            }
+
+            setPlaceholder(text) {
+                this.placeholder = text;
+                this.updateDisplay();
+            }
+            
+            setValue(val) {
+                this.value = val;
+                this.updateDisplay();
+            }
+
+            toggle() {
+                this.isOpen = !this.isOpen;
+                this.dropdown.classList.toggle('hidden', !this.isOpen);
+                if(this.isOpen) {
+                    this.searchInput.value = '';
+                    this.searchInput.focus();
+                    this.filterOptions('');
+                }
+            }
+
+            close() {
+                this.isOpen = false;
+                if(this.dropdown) this.dropdown.classList.add('hidden');
+            }
+
+            updateDisplay() {
+                const label = this.value || this.placeholder;
+                this.displaySpan.textContent = label;
+                this.displaySpan.classList.toggle('text-gray-500', !this.value);
+                this.displaySpan.classList.toggle('text-gray-800', !!this.value);
+            }
+            
+            filterOptions(query) {
+                const q = query.toLowerCase();
+                const filtered = this.options.filter(o => o.toLowerCase().includes(q) || (o === "" && this.placeholder.toLowerCase().includes(q)));
+                this.listContainer.innerHTML = '';
+                if(filtered.length === 0) {
+                    this.listContainer.innerHTML = '<div class="p-2 text-gray-500 text-xs text-center">No results</div>';
+                    return;
+                }
+                filtered.forEach(opt => {
+                    const div = document.createElement('div');
+                    div.className = "p-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700";
+                    div.textContent = opt || this.placeholder; 
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        this.value = opt;
+                        this.updateDisplay();
+                        this.close();
+                        if(this.onChange) this.onChange(this.value);
+                    };
+                    this.listContainer.appendChild(div);
+                });
+            }
+
+            render() {
+                this.container.innerHTML = '';
+                this.container.className = "relative"; 
+                this.toggleBtn = document.createElement('div');
+                this.toggleBtn.className = "w-full border border-gray-300 bg-white rounded p-2 text-sm flex justify-between items-center cursor-pointer hover:border-blue-500 transition";
+                this.displaySpan = document.createElement('span');
+                this.displaySpan.className = "truncate mr-2 text-gray-500"; 
+                this.displaySpan.textContent = this.placeholder;
+                const icon = document.createElement('i');
+                icon.className = "fa-solid fa-chevron-down text-xs text-gray-400";
+                this.toggleBtn.appendChild(this.displaySpan);
+                this.toggleBtn.appendChild(icon);
+                this.toggleBtn.onclick = () => this.toggle();
+                this.dropdown = document.createElement('div');
+                this.dropdown.className = "absolute z-20 w-full bg-white border border-gray-300 rounded mt-1 shadow-lg hidden flex flex-col";
+                this.searchInput = document.createElement('input');
+                this.searchInput.type = "text";
+                this.searchInput.className = "p-2 border-b border-gray-200 text-sm focus:outline-none w-full bg-gray-50";
+                this.searchInput.placeholder = "Tìm kiếm...";
+                this.searchInput.onclick = (e) => e.stopPropagation();
+                this.searchInput.onkeyup = (e) => this.filterOptions(e.target.value);
+                this.listContainer = document.createElement('div');
+                this.listContainer.className = "max-h-48 overflow-y-auto";
+                this.dropdown.appendChild(this.searchInput);
+                this.dropdown.appendChild(this.listContainer);
+                this.container.appendChild(this.toggleBtn);
+                this.container.appendChild(this.dropdown);
+            }
+        }
+
+        const LOCAL_DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVKdsOEs3gPF1baVcil3_3LCmM40uSnTdtuvXqs1nJMuj1KdCrWDDb5c1b5hU9n-x1ZE6MjjqJ572H/pub?output=csv"; 
+
+        let map, mainMarkers = [];
+        let allHousingData = [];
+
+        const translations = {
+            vi: {
+                searchPlaceholder: "Tìm thành phố, khu vực...",
+                minPricePlaceholder: "Giá sàn",
+                maxPricePlaceholder: "Giá trần",
+                filterTitle: "Bộ lọc",
+                showFilter: "Hiện bộ lọc",
+                hideFilter: "Ẩn bộ lọc",
+                descriptionLabel: "Mô tả",
+                contribute: "Chia sẻ địa chỉ nhà ở tại đây",
+                contactInfo: "Thông tin liên hệ",
+                close: "Đóng",
+                filterRating: "Số sao tối thiểu",
+                filterCountry: "Quốc gia",
+                filterCity: "Thành phố / Khu vực",
+                filterAnyRating: "Bất kỳ số sao",
+                filterAnyCountry: "Tất cả quốc gia",
+                filterAnyCity: "Tất cả thành phố",
+                filterFrom: "Từ",
+                loading: "Đang tải...", ready: "Sẵn sàng", resultsText: "kết quả", noResults: "Không tìm thấy kết quả.", noDescription: "Không có mô tả",
+                priceLabel: "Giá thuê hàng tháng (USD)",
+                noPrice: "Chưa có thông tin giá"
+            },
+            en: {
+                searchPlaceholder: "Search city...",
+                minPricePlaceholder: "Min price",
+                maxPricePlaceholder: "Max price",
+                filterTitle: "Filters",
+                showFilter: "Show filters",
+                hideFilter: "Hide filters",
+                descriptionLabel: "Description",
+                contribute: "Share housing address",
+                contactInfo: "Contact Info",
+                close: "Close",
+                filterRating: "Minimum stars",
+                filterCountry: "Country",
+                filterCity: "City / Region",
+                filterAnyRating: "Any star rating",
+                filterAnyCountry: "All countries",
+                filterAnyCity: "All cities",
+                filterFrom: "From",
+                loading: "Loading...", ready: "Ready", resultsText: "results", noResults: "No results found.", noDescription: "No description available.",
+                priceLabel: "Monthly rent (USD)",
+                noPrice: "Price not provided"
+            }
+        };
+
+        const INVITE_FIELDS = {
+            mapUrl: 'Dán LINK Google map của Nhà ở mà bạn muôn giới thiệu:\n',
+            price: 'Giá thuê hằng tháng (USD):',
+            owner: 'Tên chủ nhà/công ty cho thuê/website:',
+            description: 'Mô tả thông tin cơ bản và review về chỗ ở này:\n(số phòng, parking, utilities, an ninh, chủ nhà, ưu nhược điểm, etc)',
+            rating: 'Bạn đánh giá chất lượng nhà ở này ở mức độ nào?',
+            feedback: 'Bạn có góp ý gì cho PhD.Hub Housing chúng tôi không?',
+            contact: 'Thông tin liên lạc của chủ nhà/công ty cho thuê:\n(Email/Facebook/SĐT/Zalo/Whatsapp...)',
+            support: 'Bạn có kênh liên lạc cá nhân nào để các bạn sinh viên được tư vấn/hỗ trợ bởi bạn về chỗ ở nay không?\n(link facebook/sđt/email/zalo...)',
+            region: 'Khu vực nhà ở:',
+            country: 'Quốc gia:',
+            reporter: 'Họ và tên của bạn:\n',
+            verify: 'Verify',
+            lat: 'Lat',
+            lng: 'Lng',
+            extractedCountry: 'Country',
+            extractedCity: 'City'
+        };
+
+        const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=';
+        const NOMINATIM_REVERSE_BASE = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=10';
+
+        function getField(row, key) {
+            return row[key] ? row[key].trim() : '';
+        }
+
+        function sanitize(value) {
+            if (!value) return '';
+            return value
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function sanitizeUrl(value) {
+            if (!value) return '#';
+            const trimmed = value.trim();
+            if (/^javascript:/i.test(trimmed)) return '#';
+            return trimmed;
+        }
+
+        function renderStars(value) {
+            const rating = Math.min(Math.max(Math.round(value || 0), 0), 5);
+            let stars = '';
+            for (let i = 0; i < 5; i++) {
+                stars += i < rating
+                    ? '<i class="fa-solid fa-star"></i>'
+                    : '<i class="fa-regular fa-star"></i>';
+            }
+            return stars;
+        }
+
+        function parsePriceField(value) {
+            if (!value) return 0;
+            const matches = value.match(/\d{2,}/g);
+            if (!matches) return 0;
+            return parseInt(matches[0].replace(/,/g, ''), 10) || 0;
+        }
+
+        function parseCoordinate(value) {
+            if (!value) return NaN;
+            const number = parseFloat(value);
+            return Number.isFinite(number) ? number : NaN;
+        }
+
+        function extractFacilities(text) {
+            if (!text) return [];
+            return text
+                .split(/[\n.,;]/)
+                .map(piece => piece.trim())
+                .filter(Boolean)
+                .slice(0, 6);
+        }
+
+        async function geocodeAddress(query) {
+            try {
+                const response = await fetch(NOMINATIM_BASE + encodeURIComponent(query));
+                if (!response.ok) return null;
+                const data = await response.json();
+                if (Array.isArray(data) && data.length) {
+                    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                }
+            } catch (error) {
+                console.warn("Geocode error:", error);
+            }
+            return null;
+        }
+
+        async function reverseGeocode(lat, lng) {
+            try {
+                const url = `${NOMINATIM_REVERSE_BASE}&lat=${lat}&lon=${lng}`;
+                const response = await fetch(url);
+                if (!response.ok) return null;
+                const data = await response.json();
+                const address = data.address || {};
+                const country = address.country || '';
+                const city = address.city || address.town || address.village || address.state || address.county || '';
+                return { country, city };
+            } catch (error) {
+                console.warn("Reverse geocode error:", error);
+                return null;
+            }
+        }
+
+        async function enrichCoordinates(entries) {
+            const enriched = [];
+            for (const entry of entries) {
+                let lat = parseFloat(entry.lat);
+                let lng = parseFloat(entry.lng);
+                let country = entry.country;
+                let city = entry.city;
+
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    const extracted = extractCoordsFromUrl(entry.mapUrl);
+                    if (extracted) {
+                        lat = extracted.lat;
+                        lng = extracted.lng;
+                    }
+                }
+
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                    const query = entry.address || entry.title;
+                    if (query) {
+                        const geocoded = await geocodeAddress(query);
+                        if (geocoded) {
+                            lat = geocoded.lat;
+                            lng = geocoded.lng;
+                        }
+                    }
+                }
+
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    if (!country || !city) {
+                        const reversed = await reverseGeocode(lat, lng);
+                        if (reversed) {
+                            if (!country) country = reversed.country;
+                            if (!city) city = reversed.city;
+                        }
+                    }
+
+                    const locationAddress = [city || entry.address, country].filter(Boolean).join(', ');
+                    enriched.push({ ...entry, lat, lng, country, city, address: locationAddress || entry.address });
+                } else {
+                    console.warn("Skipping entry without coords:", entry.title, entry);
+                }
+            }
+            return enriched;
+        }
+
+        const filterTitleEl = document.getElementById('filter-title');
+        const ratingLabelEl = document.getElementById('filter-rating-label');
+        const countryLabelEl = document.getElementById('filter-country-label');
+        const cityLabelEl = document.getElementById('filter-city-label');
+        const ratingSelectEl = document.getElementById('filter-rating');
+        const loadingStatusEl = document.getElementById('loading-status');
+        const resultCountEl = document.getElementById('result-count');
+        const contributeTextEl = document.getElementById('contribute-text');
+        const langSelector = document.getElementById('lang-selector');
+        const filterBodyEl = document.getElementById('filter-body');
+        const filterToggleBtn = document.getElementById('filter-toggle');
+        const contactModal = document.getElementById('contact-modal');
+        const contactModalTitle = document.getElementById('contact-modal-title');
+        const contactModalContent = document.getElementById('contact-modal-content');
+
+        let currentLang = 'vi';
+        let dataReady = false;
+        let lastResultCount = null;
+        let filtersExpanded = false;
+        
+        const countrySelect = new SearchableSelect('filter-country-wrapper', 'Tất cả quốc gia', (val) => {
+            Analytics.trackFilter('country', val || 'all');
+            populateFilterOptions(allHousingData);
+            filterData();
+        });
+        
+        const citySelect = new SearchableSelect('filter-city-wrapper', 'Tất cả thành phố', (val) => {
+            Analytics.trackFilter('city', val || 'all');
+            filterData();
+        });
+
+        function applyTranslations() {
+            const t = translations[currentLang];
+            filterTitleEl.textContent = t.filterTitle;
+            contributeTextEl.textContent = t.contribute;
+            filterToggleBtn.textContent = filtersExpanded ? t.hideFilter : t.showFilter;
+            if(contactModalTitle) contactModalTitle.textContent = t.contactInfo;
+            const closeBtn = contactModal ? contactModal.querySelector('div > div > button') : null;
+            if(closeBtn) closeBtn.textContent = t.close;
+            ratingLabelEl.textContent = t.filterRating;
+            countryLabelEl.textContent = t.filterCountry;
+            cityLabelEl.textContent = t.filterCity;
+            updateSelectPlaceholders();
+            populateFilterOptions(allHousingData); 
+            loadingStatusEl.textContent = dataReady ? t.ready : t.loading;
+            if (lastResultCount !== null) resultCountEl.innerText = `${lastResultCount} ${t.resultsText}`;
+        }
+
+        function updateSelectPlaceholders() {
+            const t = translations[currentLang];
+            if (ratingSelectEl) {
+                ratingSelectEl.options[0].textContent = t.filterAnyRating;
+                for (let i = 1; i < ratingSelectEl.options.length; i++) {
+                    const value = ratingSelectEl.options[i].value;
+                    ratingSelectEl.options[i].textContent = `${t.filterFrom} ${value} ★`;
+                }
+            }
+            if (countrySelect) countrySelect.setPlaceholder(t.filterAnyCountry);
+            if (citySelect) citySelect.setPlaceholder(t.filterAnyCity);
+        }
+
+        function uniqueValues(list) {
+            return Array.from(new Set(list.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+        }
+
+        function populateFilterOptions(data) {
+            if (!data || !data.length) return;
+            const countries = uniqueValues(data.map(item => item.country));
+            const cities = uniqueValues(data.map(item => {
+                if (countrySelect && countrySelect.value) {
+                    return item.country === countrySelect.value ? item.city : null;
+                }
+                return item.city;
+            }));
+            countrySelect.setOptions(['', ...countries]);
+            citySelect.setOptions(['', ...cities]);
+        }
+
+        function showContactPopup(content) {
+            const safeContent = content ? content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>') : 'Không có thông tin / No info available';
+            const linkedContent = safeContent.replace(
+                /(https?:\/\/[^\s]+)/g, 
+                '<a href="$1" target="_blank" class="text-blue-600 underline break-all">$1</a>'
+            );
+            contactModalContent.innerHTML = linkedContent;
+            contactModal.classList.remove('hidden');
+            Analytics.track('contact_popup_opened');
+        }
+
+        function closeContactPopup() {
+            contactModal.classList.add('hidden');
+            Analytics.track('contact_popup_closed');
+        }
+
+        if(contactModal) {
+            contactModal.addEventListener('click', (e) => {
+                if (e.target === contactModal) closeContactPopup();
+            });
+        }
+
+        function setLanguage(lang) {
+            if (!translations[lang]) return;
+            currentLang = lang;
+            langSelector.value = currentLang;
+            Analytics.track('language_changed', { language: lang });
+            applyTranslations();
+            if (map) filterData();
+        }
+
+        langSelector.addEventListener('change', (e) => setLanguage(e.target.value));
+        
+        function toggleFilters() {
+            filtersExpanded = !filtersExpanded;
+            filterBodyEl.classList.toggle('hidden', !filtersExpanded);
+            const t = translations[currentLang];
+            filterToggleBtn.textContent = filtersExpanded ? t.hideFilter : t.showFilter;
+            Analytics.track('filter_toggle', { expanded: filtersExpanded });
+        }
+        filterToggleBtn.addEventListener('click', toggleFilters);
+        ratingSelectEl.addEventListener('change', function() {
+            Analytics.trackFilter('rating', ratingSelectEl.value);
+            filterData();
+        });
+        
+        function initResizeHandle() {
+            const leftColumn = document.getElementById('left-column');
+            const resizeHandle = document.getElementById('resize-handle');
+            if (!leftColumn || !resizeHandle) return;
+            const savedWidth = localStorage.getItem('leftColumnWidth');
+            if (savedWidth) {
+                leftColumn.style.width = savedWidth;
+            }
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+            const MIN_WIDTH = 250;
+            const MAX_WIDTH = 500;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = leftColumn.offsetWidth;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                Analytics.track('resize_started', { initial_width: startWidth });
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const diff = e.clientX - startX;
+                let newWidth = startWidth + diff;
+                newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+                leftColumn.style.width = newWidth + 'px';
+                if (map) {
+                    setTimeout(() => map.invalidateSize(), 10);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    const finalWidth = leftColumn.style.width;
+                    localStorage.setItem('leftColumnWidth', finalWidth);
+                    Analytics.track('resize_completed', { final_width: finalWidth, width_change: parseInt(finalWidth) - startWidth });
+                }
+            });
+        }
+        
+        function initMaps() {
+            if (window.self !== window.top) {
+                const backBtn = document.getElementById('back-btn');
+                if(backBtn) backBtn.style.display = 'none';
+            }
+
+            map = L.map('map').setView([20, 105], 3);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            map.on('zoomend', function() {
+                Analytics.trackMap('zoom', { zoom_level: map.getZoom() });
+            });
+            map.on('moveend', function() {
+                const center = map.getCenter();
+                Analytics.trackMap('pan', { lat: center.lat, lng: center.lng, zoom: map.getZoom() });
+            });
+            window.addEventListener('resize', () => {
+                if (map) {
+                    setTimeout(() => map.invalidateSize(), 100);
+                }
+            });
+            fetchHousingData();
+        }
+
+        function buildLocalizedDataUrl() {
+            const tsParam = "t=" + Date.now();
+            return LOCAL_DATA_URL + (LOCAL_DATA_URL.includes('?') ? '&' : '?') + tsParam;
+        }
+
+        function fetchHousingData() {
+            const localUrl = buildLocalizedDataUrl();
+            Papa.parse(localUrl, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        console.log("Loaded from Local File");
+                        Analytics.track('data_loaded', { 
+                            record_count: results.data.length,
+                            source: 'google_sheets'
+                        });
+                        processData(results.data);
+                    } else {
+                        console.warn("Local file empty/invalid.");
+                        Analytics.track('data_load_failed', { reason: 'empty_or_invalid' });
+                        document.getElementById('listing-container').innerHTML = `<p class="text-red-500 text-center text-xs">Không có dữ liệu.</p>`;
+                    }
+                },
+                error: function(err) {
+                    console.warn("Local file failed.", err);
+                    Analytics.track('data_load_failed', { reason: 'fetch_error', error: err.message || 'unknown' });
+                    document.getElementById('listing-container').innerHTML = `<p class="text-red-500 text-center text-xs">Lỗi tải dữ liệu.</p>`;
+                }
+            });
+        }
+
+        function extractCoordsFromUrl(url) {
+            if (!url) return null;
+            const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+            const match = url.match(regex);
+            return (match && match.length >= 3) ? { lat: parseFloat(match[1]), lng: parseFloat(match[2]) } : null;
+        }
+
+        async function processData(rawData) {
+            console.log("Raw CSV Data:", rawData);
+            const normalized = rawData
+                .map((row, index) => {
+                    let country = getField(row, INVITE_FIELDS.extractedCountry);
+                    let city = getField(row, INVITE_FIELDS.extractedCity);
+                    if (!country) country = getField(row, INVITE_FIELDS.country);
+                    if (!city) city = getField(row, INVITE_FIELDS.region);
+                    const region = getField(row, INVITE_FIELDS.region);
+                    const mapUrl = getField(row, INVITE_FIELDS.mapUrl);
+                    const owner = getField(row, INVITE_FIELDS.owner);
+                    const reporter = getField(row, INVITE_FIELDS.reporter);
+                    const verify = getField(row, INVITE_FIELDS.verify);
+                    const priceRaw = getField(row, INVITE_FIELDS.price);
+                    const priceValue = parsePriceField(priceRaw);
+                    const description = getField(row, INVITE_FIELDS.description);
+                    const feedback = getField(row, INVITE_FIELDS.feedback);
+                    const rating = getField(row, INVITE_FIELDS.rating);
+                    const contact = getField(row, INVITE_FIELDS.contact) || getField(row, INVITE_FIELDS.support);
+                    const explicitLat = parseCoordinate(getField(row, INVITE_FIELDS.lat));
+                    const explicitLng = parseCoordinate(getField(row, INVITE_FIELDS.lng));
+                    const address = [city || region, country].filter(Boolean).join(', ');
+                    const title = owner || reporter || address || `Listing ${index + 1}`;
+                    const descriptionPieces = [description, feedback ? `Góp ý: ${feedback}` : ''].filter(Boolean);
+                    const ratingValue = parseInt(rating, 10);
+                    return {
+                        id: index,
+                        title,
+                        price: priceValue,
+                        address,
+                        country,
+                        city: city || region,
+                        description: descriptionPieces.join(' '),
+                        facilities: extractFacilities(`${description} ${feedback}`),
+                        contact: contact || "Không có thông tin liên hệ.",
+                        mapUrl,
+                        lat: explicitLat,
+                        lng: explicitLng,
+                        rating: Number.isNaN(ratingValue) ? 0 : Math.min(Math.max(ratingValue, 0), 5),
+                        priceText: priceRaw,
+                        verify
+                    };
+                })
+                .filter(entry => entry.title && (entry.mapUrl || entry.address) && String(entry.verify).toUpperCase() === 'TRUE');
+
+            console.log("Normalized entries:", normalized.length);
+
+            if (!normalized.length) {
+                const container = document.getElementById('listing-container');
+                container.innerHTML = `<p class="text-red-500 text-center text-xs">${translations[currentLang].noResults}</p>`;
+                resultCountEl.innerText = '';
+                return;
+            }
+
+            const withCoords = await enrichCoordinates(normalized);
+            allHousingData = withCoords;
+
+            console.log("Final Data:", allHousingData);
+
+            if (!allHousingData.length) {
+                const container = document.getElementById('listing-container');
+                container.innerHTML = `<p class="text-red-500 text-center text-xs">${translations[currentLang].noResults}</p>`;
+                resultCountEl.innerText = '';
+                return;
+            }
+
+            dataReady = true;
+            populateFilterOptions(allHousingData);
+            applyTranslations();
+            filterData();
+            setTimeout(() => map.invalidateSize(), 250);
+        }
+
+        function filterData() {
+            const container = document.getElementById('listing-container');
+            container.innerHTML = '';
+            mainMarkers.forEach(m => map.removeLayer(m));
+            mainMarkers = [];
+
+            const selectedRating = parseInt(ratingSelectEl.value, 10);
+            const selectedCountry = countrySelect.value;
+            const selectedCity = citySelect.value;
+
+            const filtered = allHousingData.filter(item => {
+                if (!Number.isNaN(selectedRating) && item.rating < selectedRating) return false;
+                if (selectedCountry && item.country !== selectedCountry) return false;
+                if (selectedCity && item.city !== selectedCity) return false;
+                return true;
+            });
+
+            lastResultCount = filtered.length;
+            resultCountEl.innerText = `${filtered.length} ${translations[currentLang].resultsText}`;
+            Analytics.track('filter_applied', {
+                rating: selectedRating || 'any',
+                country: selectedCountry || 'all',
+                city: selectedCity || 'all',
+                result_count: filtered.length,
+                total_listings: allHousingData.length
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 text-center mt-4 text-xs">${translations[currentLang].noResults}</p>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white border rounded p-2 hover:shadow-md transition cursor-pointer flex flex-col gap-1 border-gray-200";
+                card.onclick = (e) => { 
+                    if(!e.target.closest('a')) {
+                        Analytics.trackListing('card_clicked', item.id, { title: item.title, address: item.address });
+                        flyToLocation(item.lat, item.lng, item.id); 
+                    }
+                };
+
+                const safeTitle = sanitize(item.title);
+                const safeDescription = sanitize(item.description);
+                const safeAddress = sanitize(item.address);
+                const safeContact = sanitize(item.contact);
+                const safeMapUrl = sanitizeUrl(item.mapUrl);
+                const contactLine = safeContact ? `<p class="text-[10px] text-gray-500 mt-1 break-words"><b>Liên hệ:</b> ${safeContact}</p>` : '';
+                const mapButton = item.mapUrl ? `<a href="${safeMapUrl}" target="_blank" data-listing-id="${item.id}" data-map-url="${safeMapUrl}" class="google-maps-link bg-green-50 text-green-600 text-[10px] font-bold px-2 py-0.5 rounded hover:bg-green-100 border border-green-200"><i class="fa-solid fa-map"></i></a>` : '';
+                const descriptionText = safeDescription || sanitize(translations[currentLang].noDescription);
+                const starRow = `<div class="flex items-center gap-1 text-xs text-yellow-500">${renderStars(item.rating)}</div>`;
+                const safePriceLabel = sanitize(translations[currentLang].priceLabel);
+                const safePriceText = sanitize(item.priceText) || sanitize(translations[currentLang].noPrice);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-gray-800 text-sm line-clamp-1 leading-tight">${safeTitle}</h3>
+                        ${mapButton ? `<div class="flex items-center">${mapButton}</div>` : ''}
+                    </div>
+                    ${starRow}
+                    <p class="text-[10px] text-gray-400 flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> <span class="truncate">${safeAddress}</span></p>
+                    <p class="text-[10px] text-gray-600 mt-1"><b>${safePriceLabel}:</b> ${safePriceText}</p>
+                    <p class="text-[10px] text-gray-600 mt-1 line-clamp-2" title="${descriptionText}"><b>${translations[currentLang].descriptionLabel}:</b> ${descriptionText}</p>
+                    ${contactLine}
+                `;
+                container.appendChild(card);
+                
+                if (item.mapUrl) {
+                    const mapLink = card.querySelector('.google-maps-link');
+                    if (mapLink) {
+                        mapLink.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            Analytics.trackListing('google_maps_clicked', item.id, { url: item.mapUrl, source: 'card' });
+                        });
+                    }
+                }
+
+                const popupRating = item.rating ? `<div class="text-yellow-500 text-xs">${renderStars(item.rating)}</div>` : '';
+                const marker = L.marker([item.lat, item.lng]).addTo(map);
+                marker.on('click', function() {
+                    Analytics.trackListing('marker_clicked', item.id, { title: item.title });
+                });
+                marker.on('popupopen', function() {
+                    Analytics.trackListing('popup_opened', item.id, { title: item.title });
+                });
+                const popupMapLink = item.mapUrl ? `<a href="${safeMapUrl}" target="_blank" data-listing-id="${item.id}" data-map-url="${safeMapUrl}" class="popup-google-maps-link text-blue-600 underline text-xs">Xem trên Google Maps</a>` : '';
+                const popupContent = `
+                    <b>${safeTitle}</b><br>
+                    <span class="text-xs text-gray-600"><b>${safePriceLabel}:</b> ${safePriceText}</span><br>
+                    <span class="text-xs text-gray-500"><b>${translations[currentLang].descriptionLabel}:</b> ${descriptionText}</span><br>
+                    ${popupRating}
+                    <hr class="my-1 border-gray-200">
+                    <span class="text-xs font-bold text-blue-600"><i class="fa-solid fa-address-card"></i> ${translations[currentLang].contactInfo || "Liên hệ"}:</span> <span class="text-xs">${safeContact}</span><br>
+                    ${popupMapLink}
+                `;
+                marker.bindPopup(popupContent);
+                
+                marker.on('popupopen', function() {
+                    const popupLink = document.querySelector('.popup-google-maps-link');
+                    if (popupLink) {
+                        popupLink.addEventListener('click', function() {
+                            Analytics.trackListing('google_maps_clicked', item.id, { url: item.mapUrl, source: 'popup' });
+                        });
+                    }
+                });
+                
+                mainMarkers.push(marker);
+            });
+        }
+
+        function flyToLocation(lat, lng, listingId = null) {
+            map.flyTo([lat, lng], 14, { duration: 1.5 });
+            Analytics.trackMap('fly_to_location', { lat, lng, listing_id: listingId });
+            setTimeout(() => {
+                const marker = mainMarkers.find(m => m.getLatLng().lat === lat && m.getLatLng().lng === lng);
+                if(marker) marker.openPopup();
+            }, 1500);
+        }
+
+        window.onload = () => { 
+            Analytics.track('page_load', { timestamp: new Date().toISOString() });
+            setLanguage(currentLang); 
+            initResizeHandle(); 
+            initMaps(); 
+        };
+    </script>
 </body>
 </html>
